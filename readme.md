@@ -1,6 +1,34 @@
 # codelocator-pro-android
 
-Standalone Android SDK workspace for CodeLocator PRO.
+`codelocator-pro-android` is the standalone Android SDK workspace extracted from CodeLocatorPRO.
+
+## Current Status
+
+- Repo split is complete and independently buildable.
+- JitPack build has been verified at tag `v2.1.0-alpha.3`.
+- Current published artifacts on JitPack:
+  - `codelocator-core` (`aar`)
+  - `codelocator-model` (`jar`)
+
+## Consume From JitPack
+
+Add JitPack repository in your Android project:
+
+```groovy
+repositories {
+    maven { url 'https://jitpack.io' }
+}
+```
+
+Add dependencies:
+
+```groovy
+dependencies {
+    implementation "com.github.git54496.codelocator-pro-android:codelocator-core:v2.1.0-alpha.3"
+    // optional explicit model dependency
+    implementation "com.github.git54496.codelocator-pro-android:codelocator-model:v2.1.0-alpha.3"
+}
+```
 
 ## Modules
 
@@ -9,19 +37,22 @@ Standalone Android SDK workspace for CodeLocator PRO.
 - `lancet/CodeLocatorLancet*`
 - `app` sample app
 
-## Build
+## Local Build
+
+Build all modules:
 
 ```bash
 ./gradlew clean build
 ```
 
-## JitPack
+Build and publish core/model to local Maven:
 
-This repo includes `jitpack.yml` and can be consumed from JitPack after a tag is pushed.
+```bash
+./gradlew clean :CodeLocatorModel:publishToMavenLocal :CodeLocatorCore:publishToMavenLocal -x test
+```
 
-Current JitPack build publishes:
+## JitPack Notes
 
-- `codelocator-model`
-- `codelocator-core`
-
-Lancet modules are excluded from JitPack build for now due upstream dependency resolution limits.
+- This repository includes `jitpack.yml`.
+- JitPack currently builds and publishes `CodeLocatorCore` and `CodeLocatorModel` only.
+- Lancet modules are temporarily excluded on JitPack because upstream dependency `me.ele:lancet-base:1.0.6` is not resolvable from public repositories.
