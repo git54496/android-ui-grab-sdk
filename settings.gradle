@@ -1,27 +1,33 @@
-include ':app'
+def isJitPack = System.getenv("JITPACK") == "true"
+
+if (!isJitPack) {
+    include ':app'
+}
 include ':CodeLocatorModel'
 include ':CodeLocatorCore'
 
-include ':CodeLocatorLancetDialog'
-project(':CodeLocatorLancetDialog').projectDir = new File("lancet/CodeLocatorLancetDialog")
+if (!isJitPack) {
+    include ':CodeLocatorLancetDialog'
+    project(':CodeLocatorLancetDialog').projectDir = new File("lancet/CodeLocatorLancetDialog")
 
-include ':CodeLocatorLancetPopup'
-project(':CodeLocatorLancetPopup').projectDir = new File("lancet/CodeLocatorLancetPopup")
+    include ':CodeLocatorLancetPopup'
+    project(':CodeLocatorLancetPopup').projectDir = new File("lancet/CodeLocatorLancetPopup")
 
-include ':CodeLocatorLancetToast'
-project(':CodeLocatorLancetToast').projectDir = new File("lancet/CodeLocatorLancetToast")
+    include ':CodeLocatorLancetToast'
+    project(':CodeLocatorLancetToast').projectDir = new File("lancet/CodeLocatorLancetToast")
 
-include ':CodeLocatorLancetXml'
-project(':CodeLocatorLancetXml').projectDir = new File("lancet/CodeLocatorLancetXml")
+    include ':CodeLocatorLancetXml'
+    project(':CodeLocatorLancetXml').projectDir = new File("lancet/CodeLocatorLancetXml")
 
-include ':CodeLocatorLancetActivity'
-project(':CodeLocatorLancetActivity').projectDir = new File("lancet/CodeLocatorLancetActivity")
+    include ':CodeLocatorLancetActivity'
+    project(':CodeLocatorLancetActivity').projectDir = new File("lancet/CodeLocatorLancetActivity")
 
-include ':CodeLocatorLancetView'
-project(':CodeLocatorLancetView').projectDir = new File("lancet/CodeLocatorLancetView")
+    include ':CodeLocatorLancetView'
+    project(':CodeLocatorLancetView').projectDir = new File("lancet/CodeLocatorLancetView")
 
-include ':CodeLocatorLancetAll'
-project(':CodeLocatorLancetAll').projectDir = new File("lancet/CodeLocatorLancetAll")
+    include ':CodeLocatorLancetAll'
+    project(':CodeLocatorLancetAll').projectDir = new File("lancet/CodeLocatorLancetAll")
+}
 
 rootProject.name = "codelocator-pro-android"
 
