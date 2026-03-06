@@ -1,4 +1,5 @@
 .gradle/
+.gradle-jdk11/
 **/build/
 local.properties
 *.iml

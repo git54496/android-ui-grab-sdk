@@ -224,6 +224,9 @@ public class WView implements Serializable {
     @SerializedName("b4")
     private String mShadowColor;
 
+    @SerializedName("b5")
+    private List<ComposeNodeInfo> mComposeNodes;
+
     @SerializedName("df")
     private float mPivotX;
 
@@ -405,6 +408,14 @@ public class WView implements Serializable {
 
     public void setExtraInfos(List<ExtraInfo> mExtraInfos) {
         this.mExtraInfos = mExtraInfos;
+    }
+
+    public List<ComposeNodeInfo> getComposeNodes() {
+        return mComposeNodes;
+    }
+
+    public void setComposeNodes(List<ComposeNodeInfo> composeNodes) {
+        this.mComposeNodes = composeNodes;
     }
 
     public void setActivity(WActivity mActivity) {

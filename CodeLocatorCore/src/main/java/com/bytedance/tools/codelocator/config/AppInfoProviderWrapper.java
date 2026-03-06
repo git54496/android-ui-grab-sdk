@@ -10,12 +10,15 @@ import android.content.res.Resources;
 import android.graphics.Rect;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewParent;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.bytedance.tools.codelocator.CodeLocator;
+import com.bytedance.tools.codelocator.compose.ComposeSemanticsCollector;
 import com.bytedance.tools.codelocator.model.ColorInfo;
+import com.bytedance.tools.codelocator.model.ComposeNodeInfo;
 import com.bytedance.tools.codelocator.model.ExtraAction;
 import com.bytedance.tools.codelocator.model.ExtraInfo;
 import com.bytedance.tools.codelocator.model.SchemaInfo;
@@ -27,6 +30,7 @@ import com.bytedance.tools.codelocator.utils.ReflectUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -99,26 +103,36 @@ public class AppInfoProviderWrapper implements AppInfoProvider {
     public boolean canProviderData(View view) {
         if (mOutAppInfoProvider != null) {
             try {
-                return mOutAppInfoProvider.canProviderData(view);
+                if (mOutAppInfoProvider.canProviderData(view)) {
+                    return true;
+                }
             } catch (Throwable t) {
                 Log.d(CodeLocator.TAG, "获取View Data失败, " + Log.getStackTraceString(t));
             }
         }
-        return false;
+        return ComposeSemanticsCollector.isComposeHostView(view);
     }
 
     @Nullable
     @Override
     public Object getViewData(View viewParent, @NonNull View view) {
+        Object outData = null;
         if (mOutAppInfoProvider != null) {
             try {
-                Object data = mOutAppInfoProvider.getViewData(viewParent, view);
-                return data;
+                outData = mOutAppInfoProvider.getViewData(viewParent, view);
+                if (outData != null) {
+                    return outData;
+                }
             } catch (Throwable t) {
                 Log.e(CodeLocator.TAG, "获取View Data失败, " + Log.getStackTraceString(t));
             }
         }
-        return null;
+        final View composeHost = findComposeHost(viewParent, view);
+        if (composeHost == null) {
+            return null;
+        }
+        final ComposeSemanticsCollector.CaptureResult captureResult = ComposeSemanticsCollector.capture(composeHost);
+        return buildComposeViewData(composeHost, view, captureResult);
     }
 
     @Override
@@ -147,6 +161,21 @@ public class AppInfoProviderWrapper implements AppInfoProvider {
     @Override
     public Collection<ExtraInfo> processViewExtra(Activity activity, View view, WView wView) {
         Collection<ExtraInfo> collection = getExtraInfoByConfig(view);
+        if (ComposeSemanticsCollector.isComposeHostView(view)) {
+            final ComposeSemanticsCollector.CaptureResult captureResult = ComposeSemanticsCollector.capture(view);
+            if (captureResult.hasNodes()) {
+                wView.setComposeNodes(captureResult.getNodes());
+            } else {
+                wView.setComposeNodes(new ArrayList<ComposeNodeInfo>());
+            }
+            final ExtraInfo composeSummary = buildComposeSummaryExtra(captureResult);
+            if (composeSummary != null) {
+                if (collection == null) {
+                    collection = new LinkedList<>();
+                }
+                collection.add(composeSummary);
+            }
+        }
         if (mOutAppInfoProvider != null) {
             try {
                 final Collection<ExtraInfo> extras = mOutAppInfoProvider.processViewExtra(activity, view, wView);
@@ -159,6 +188,70 @@ public class AppInfoProviderWrapper implements AppInfoProvider {
             } catch (Throwable t) {
                 Log.e(CodeLocator.TAG, "processViewExtra, " + Log.getStackTraceString(t));
             }
+        }
+        return collection;
+    }
+
+    @Nullable
+    private ExtraInfo buildComposeSummaryExtra(@NonNull ComposeSemanticsCollector.CaptureResult captureResult) {
+        if (!captureResult.hasNodes() && captureResult.getError() == null) {
+            return null;
+        }
+        final StringBuilder summary = new StringBuilder();
+        summary.append("nodeCount=").append(captureResult.getNodeCount());
+        summary.append(", clickableCount=").append(captureResult.getClickableNodeCount());
+        final List<String> samples = captureResult.getTextSamples();
+        if (samples != null && !samples.isEmpty()) {
+            summary.append(", samples=").append(samples);
+        }
+        if (captureResult.getError() != null) {
+            summary.append(", error=").append(captureResult.getError());
+        }
+        final ExtraAction action = new ExtraAction(
+                ExtraAction.ActionType.NONE,
+                summary.toString(),
+                "ComposeSummary",
+                null
+        );
+        return new ExtraInfo("ComposeSummary", ExtraInfo.ShowType.EXTRA_TABLE, action);
+    }
+
+    @NonNull
+    private HashMap<String, Object> buildComposeViewData(@NonNull View hostView,
+                                                         @NonNull View targetView,
+                                                         @NonNull ComposeSemanticsCollector.CaptureResult captureResult) {
+        final HashMap<String, Object> out = new HashMap<>();
+        out.put("host_view_class", hostView.getClass().getName());
+        out.put("target_view_class", targetView.getClass().getName());
+        out.put("target_is_host", hostView == targetView);
+        out.put("node_count", captureResult.getNodeCount());
+        out.put("clickable_node_count", captureResult.getClickableNodeCount());
+        out.put("text_samples", captureResult.getTextSamples());
+        out.put("nodes", captureResult.getNodes());
+        if (captureResult.getError() != null) {
+            out.put("error", captureResult.getError());
+        }
+        return out;
+    }
+
+    @Nullable
+    private View findComposeHost(@Nullable View viewParent, @Nullable View targetView) {
+        View host = findComposeHostByParent(viewParent);
+        if (host != null) {
+            return host;
+        }
+        return findComposeHostByParent(targetView);
+    }
+
+    @Nullable
+    private View findComposeHostByParent(@Nullable View view) {
+        View current = view;
+        while (current != null) {
+            if (ComposeSemanticsCollector.isComposeHostView(current)) {
+                return current;
+            }
+            final ViewParent parent = current.getParent();
+            current = parent instanceof View ? (View) parent : null;
         }
         return null;
     }
