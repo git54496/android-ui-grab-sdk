@@ -227,6 +227,9 @@ public class WView implements Serializable {
     @SerializedName("b5")
     private List<ComposeNodeInfo> mComposeNodes;
 
+    @SerializedName("b6")
+    private ComposeCaptureInfo mComposeCapture;
+
     @SerializedName("df")
     private float mPivotX;
 
@@ -416,6 +419,14 @@ public class WView implements Serializable {
 
     public void setComposeNodes(List<ComposeNodeInfo> composeNodes) {
         this.mComposeNodes = composeNodes;
+    }
+
+    public ComposeCaptureInfo getComposeCapture() {
+        return mComposeCapture;
+    }
+
+    public void setComposeCapture(ComposeCaptureInfo composeCapture) {
+        this.mComposeCapture = composeCapture;
     }
 
     public void setActivity(WActivity mActivity) {

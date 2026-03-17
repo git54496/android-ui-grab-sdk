@@ -5,8 +5,8 @@
 ## Current Status
 
 - Repo split is complete and independently buildable.
-- JitPack build has been verified at tag `v2.1.0-alpha.4`.
-- `CodeLocatorCore` now captures Compose semantics via `AccessibilityNodeInfo` and writes nodes into `WView.mComposeNodes (b5)`.
+- JitPack build target for this release is `v2.1.0-alpha.5`.
+- `CodeLocatorCore` now captures Compose semantics and richer Compose render/component data into `WView.mComposeNodes (b5)` and `WView.mComposeCapture (b6)`.
 - Current published artifacts on JitPack:
   - `codelocator-core` (`aar`)
   - `codelocator-model` (`jar`)
@@ -25,9 +25,9 @@ Add dependencies:
 
 ```groovy
 dependencies {
-    implementation "com.github.git54496.codelocator-pro-android:codelocator-core:v2.1.0-alpha.4"
+    implementation "com.github.git54496.codelocator-pro-android:codelocator-core:v2.1.0-alpha.5"
     // optional explicit model dependency
-    implementation "com.github.git54496.codelocator-pro-android:codelocator-model:v2.1.0-alpha.4"
+    implementation "com.github.git54496.codelocator-pro-android:codelocator-model:v2.1.0-alpha.5"
 }
 ```
 

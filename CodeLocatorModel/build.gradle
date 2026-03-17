@@ -25,6 +25,7 @@ repositories {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     api "com.google.code.gson:gson:2.8.5"
+    testImplementation 'junit:junit:4.13.2'
 }
 
 sourceCompatibility = "1.8"
