@@ -40,7 +40,6 @@ import static com.bytedance.tools.codelocator.utils.CodeLocatorConstants.KEY_STO
 import static com.bytedance.tools.codelocator.utils.CodeLocatorConstants.KEY_TOOLS_COMMAND;
 import static com.bytedance.tools.codelocator.utils.CodeLocatorConstants.ResultKey.FILE_PATH;
 import static com.bytedance.tools.codelocator.utils.CodeLocatorConstants.ResultKey.SPLIT;
-import static com.bytedance.tools.codelocator.utils.CodeLocatorConstants.TMP_DATA_FILE_NAME;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -503,7 +502,7 @@ public class CodeLocatorReceiver extends BroadcastReceiver {
             saveAsync = smartArgs.getBoolean(KEY_ASYNC);
             saveToFile = saveAsync || smartArgs.getBoolean(KEY_SAVE_TO_FILE) || (compressData.length() > CodeLocator.sGlobalConfig.getMaxBroadcastTransferLength());
             if (saveToFile) {
-                savedFile = FileUtils.getFile(context, TMP_DATA_FILE_NAME);
+                savedFile = FileUtils.getFile(context, buildTempDataFileName());
                 filePath = FileUtils.saveContent(savedFile, compressData);
                 if (filePath != null) {
                     setResultData(FILE_PATH + SPLIT + filePath);
@@ -539,5 +538,9 @@ public class CodeLocatorReceiver extends BroadcastReceiver {
                 Log.d(CodeLocator.TAG, "CodeLocator调用成功, 输出内容大小 " + dataLength);
             }
         }
+    }
+
+    private String buildTempDataFileName() {
+        return "codeLocator_data_" + System.currentTimeMillis() + ".txt";
     }
 }
