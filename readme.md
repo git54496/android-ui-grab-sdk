@@ -1,12 +1,12 @@
-# codelocator-pro-android
+# android-ui-grab-sdk
 
-`codelocator-pro-android` is the standalone Android SDK workspace extracted from CodeLocatorPRO.
+`android-ui-grab-sdk` is the standalone Android SDK workspace used by Android UI Grab.
 
 ## Current Status
 
 - Repo split is complete and independently buildable.
-- JitPack build target for this release is `v2.1.0-alpha.6`.
-- `CodeLocatorCore` now captures Compose semantics and richer Compose render/component data into `WView.mComposeNodes (b5)` and `WView.mComposeCapture (b6)`.
+- JitPack build target for this release is `v2.1.0-alpha.8`.
+- `android-ui-grab-sdk` now captures Compose semantics and richer Compose render/component data into `WView.mComposeNodes (b5)` and `WView.mComposeCapture (b6)`.
 - Current published artifacts on JitPack:
   - `codelocator-core` (`aar`)
   - `codelocator-model` (`jar`)
@@ -25,9 +25,9 @@ Add dependencies:
 
 ```groovy
 dependencies {
-    implementation "com.github.git54496.codelocator-pro-android:codelocator-core:v2.1.0-alpha.6"
+    implementation "com.github.git54496.android-ui-grab-sdk:codelocator-core:v2.1.0-alpha.8"
     // optional explicit model dependency
-    implementation "com.github.git54496.codelocator-pro-android:codelocator-model:v2.1.0-alpha.6"
+    implementation "com.github.git54496.android-ui-grab-sdk:codelocator-model:v2.1.0-alpha.8"
 }
 ```
 

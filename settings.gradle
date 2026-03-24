@@ -29,7 +29,7 @@ if (!isJitPack) {
     project(':CodeLocatorLancetAll').projectDir = new File("lancet/CodeLocatorLancetAll")
 }
 
-rootProject.name = "codelocator-pro-android"
+rootProject.name = "android-ui-grab-sdk"
 
 if (new File("codeLocator.gradle").exists()) {
     apply from: 'codeLocator.gradle'
