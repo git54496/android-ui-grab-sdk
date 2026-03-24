@@ -14,6 +14,7 @@ import android.os.Build;
 import android.os.IBinder;
 import android.os.SystemClock;
 import android.text.Spanned;
+import android.util.ArrayMap;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -48,6 +49,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -56,6 +58,20 @@ import java.util.Set;
  * @author liujian.android@bytedance.com
  */
 public class ActivityUtils {
+
+    private static final class ActivityRecordInfo {
+        final Activity activity;
+        final boolean current;
+        final boolean paused;
+        final boolean stopped;
+
+        ActivityRecordInfo(Activity activity, boolean current, boolean paused, boolean stopped) {
+            this.activity = activity;
+            this.current = current;
+            this.paused = paused;
+            this.stopped = stopped;
+        }
+    }
 
     private static ArrayList<WView> getAllDialogView(Activity activity) {
         ArrayList<WView> dialogViews = new ArrayList<>();
@@ -203,11 +219,12 @@ public class ActivityUtils {
         buildShowAndAppInfo(wApplication, activity, needColor);
         buildActivityInfo(wApplication, activity);
         try {
-            buildFragmentInfo(wApplication, activity, isMainThread);
+            buildFragmentInfo(wApplication.getActivity(), activity, isMainThread, false);
         } catch (Throwable t) {
             Log.d(CodeLocator.TAG, "buildFragmentInfo error, stackTrace: " + Log.getStackTraceString(t));
         }
         buildViewInfo(wApplication, activity);
+        buildActivityStackInfo(wApplication, activity, isMainThread);
         return wApplication;
     }
 
@@ -496,11 +513,20 @@ public class ActivityUtils {
         }
     }
 
-    private static void buildActivityInfo(WApplication wApplication, Activity activity) {
+    private static WActivity createActivityInfo(Activity activity) {
         WActivity wActivity = new WActivity();
         wActivity.setMemAddr(CodeLocatorUtils.getObjectMemAddr(activity));
         wActivity.setStartInfo(activity.getIntent().getStringExtra(CodeLocatorConstants.ACTIVITY_START_STACK_INFO));
         wActivity.setClassName(activity.getClass().getName());
+        return wActivity;
+    }
+
+    private static void buildActivityInfo(WApplication wApplication, Activity activity) {
+        WActivity wActivity = createActivityInfo(activity);
+        wActivity.setCurrent(true);
+        wActivity.setCovered(false);
+        wActivity.setPaused(false);
+        wActivity.setStopped(false);
         wApplication.setActivity(wActivity);
         final Set<ICodeLocatorProcessor> codeLocatorProcessors = CodeLocator.sGlobalConfig.getCodeLocatorProcessors();
         if (codeLocatorProcessors != null) {
@@ -556,7 +582,102 @@ public class ActivityUtils {
         }
     }
 
-    private static void buildFragmentInfo(WApplication wApplication, Activity activity, boolean isMainThread) {
+    private static void buildActivityStackInfo(WApplication wApplication, Activity currentActivity, boolean isMainThread) {
+        final ArrayList<ActivityRecordInfo> activityRecords = collectActivityRecords(currentActivity);
+        final ArrayList<WActivity> stack = new ArrayList<>();
+        final WActivity current = wApplication.getActivity();
+
+        if (activityRecords.isEmpty()) {
+            if (current != null) {
+                stack.add(current);
+            }
+            wApplication.setActivityStack(stack);
+            return;
+        }
+
+        for (int i = 0; i < activityRecords.size(); i++) {
+            final ActivityRecordInfo record = activityRecords.get(i);
+            final boolean covered = i > 0;
+            final WActivity target = record.activity == currentActivity ? current : createActivityInfo(record.activity);
+            if (target == null) {
+                continue;
+            }
+            fillActivityState(target, record, covered);
+            if (record.activity != currentActivity) {
+                try {
+                    buildFragmentInfo(target, record.activity, isMainThread, covered);
+                } catch (Throwable t) {
+                    Log.d(CodeLocator.TAG, "buildActivityStack fragments error, stackTrace: " + Log.getStackTraceString(t));
+                }
+            }
+            stack.add(target);
+        }
+        wApplication.setActivityStack(stack);
+    }
+
+    private static ArrayList<ActivityRecordInfo> collectActivityRecords(Activity currentActivity) {
+        final ArrayList<ActivityRecordInfo> records = new ArrayList<>();
+        try {
+            final Class activityThreadClass = Class.forName("android.app.ActivityThread");
+            final Object activityThread = ReflectUtils.getClassMethod(activityThreadClass, "currentActivityThread").invoke(null);
+            final Field activitiesField = ReflectUtils.getClassField(activityThreadClass, "mActivities");
+            final Map<Object, Object> activities;
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
+                activities = (HashMap<Object, Object>) activitiesField.get(activityThread);
+            } else {
+                activities = (ArrayMap<Object, Object>) activitiesField.get(activityThread);
+            }
+            if (activities != null) {
+                for (Object activityRecord : activities.values()) {
+                    if (activityRecord == null) {
+                        continue;
+                    }
+                    final Class activityRecordClass = activityRecord.getClass();
+                    final Field activityField = ReflectUtils.getClassField(activityRecordClass, "activity");
+                    final Field stopField = ReflectUtils.getClassField(activityRecordClass, "stopped");
+                    final Field pausedField = ReflectUtils.getClassField(activityRecordClass, "paused");
+                    if (activityField == null || stopField == null || pausedField == null) {
+                        continue;
+                    }
+                    final Activity activity = (Activity) activityField.get(activityRecord);
+                    if (activity == null || activity.isFinishing()) {
+                        continue;
+                    }
+                    final boolean stopped = stopField.getBoolean(activityRecord);
+                    final boolean paused = pausedField.getBoolean(activityRecord);
+                    final boolean current = activity == currentActivity || (!paused && !stopped);
+                    records.add(new ActivityRecordInfo(activity, current, paused, stopped));
+                }
+            }
+        } catch (Throwable t) {
+            Log.d(CodeLocator.TAG, "collectActivityRecords error, stackTrace: " + Log.getStackTraceString(t));
+        }
+        if (records.isEmpty() && currentActivity != null) {
+            records.add(new ActivityRecordInfo(currentActivity, true, false, false));
+        }
+        records.sort((left, right) -> {
+            if (left.current != right.current) {
+                return left.current ? -1 : 1;
+            }
+            if (left.stopped != right.stopped) {
+                return left.stopped ? 1 : -1;
+            }
+            if (left.paused != right.paused) {
+                return left.paused ? 1 : -1;
+            }
+            return left.activity.getClass().getName().compareTo(right.activity.getClass().getName());
+        });
+        return records;
+    }
+
+    private static void fillActivityState(WActivity activity, ActivityRecordInfo record, boolean covered) {
+        activity.setCurrent(record.current && !covered);
+        activity.setCovered(covered);
+        activity.setPaused(record.paused);
+        activity.setStopped(record.stopped);
+    }
+
+    private static void buildFragmentInfo(WActivity wActivity, Activity activity, boolean isMainThread, boolean coveredByTopActivity) {
         ArrayList<WFragment> childFragments = new ArrayList<>();
         if (activity instanceof FragmentActivity) {
             final androidx.fragment.app.FragmentManager supportFragmentManager = ((FragmentActivity) activity).getSupportFragmentManager();
@@ -564,7 +685,7 @@ public class ActivityUtils {
             if (!fragments.isEmpty()) {
                 for (androidx.fragment.app.Fragment f : fragments) {
                     try {
-                        childFragments.add(convertFragmentToWFragment(f, isMainThread));
+                        childFragments.add(convertFragmentToWFragment(f, isMainThread, coveredByTopActivity));
                     } catch (Throwable t) {
                         Log.d(CodeLocator.TAG, "convertFragmentToWFragment error, stackTrace: " + Log.getStackTraceString(t));
                     }
@@ -587,7 +708,7 @@ public class ActivityUtils {
             if (!fragments.isEmpty()) {
                 for (Fragment f : fragments) {
                     try {
-                        childFragments.add(convertFragmentToWFragment(f, isMainThread));
+                        childFragments.add(convertFragmentToWFragment(f, isMainThread, coveredByTopActivity));
                     } catch (Throwable t) {
                         Log.d(CodeLocator.TAG, "convertFragmentToWFragment error, stackTrace: " + Log.getStackTraceString(t));
                     }
@@ -595,11 +716,11 @@ public class ActivityUtils {
             }
         }
         if (!childFragments.isEmpty()) {
-            wApplication.getActivity().setFragments(childFragments);
+            wActivity.setFragments(childFragments);
         }
     }
 
-    private static WFragment convertFragmentToWFragment(androidx.fragment.app.Fragment fragment, boolean isMainThread) {
+    private static WFragment convertFragmentToWFragment(androidx.fragment.app.Fragment fragment, boolean isMainThread, boolean coveredByTopActivity) {
         WFragment wFragment = new WFragment();
         wFragment.setClassName(fragment.getClass().getName());
         wFragment.setMemAddr(CodeLocatorUtils.getObjectMemAddr(fragment));
@@ -608,9 +729,7 @@ public class ActivityUtils {
         wFragment.setUserVisibleHint(fragment.getUserVisibleHint());
         wFragment.setTag(fragment.getTag());
         wFragment.setId(fragment.getId());
-        if (fragment.getView() != null) {
-            wFragment.setViewMemAddr(CodeLocatorUtils.getObjectMemAddr(fragment.getView()));
-        }
+        bindFragmentViewState(wFragment, fragment.getView(), coveredByTopActivity);
         List<androidx.fragment.app.Fragment> childFragments = null;
         if (isMainThread) {
             final androidx.fragment.app.FragmentManager childFragmentManager = fragment.getChildFragmentManager();
@@ -631,7 +750,7 @@ public class ActivityUtils {
         if (childFragments != null && !childFragments.isEmpty()) {
             ArrayList<WFragment> childWFragments = new ArrayList<>();
             for (androidx.fragment.app.Fragment f : childFragments) {
-                WFragment convertFragment = convertFragmentToWFragment(f, isMainThread);
+                WFragment convertFragment = convertFragmentToWFragment(f, isMainThread, coveredByTopActivity);
                 childWFragments.add(convertFragment);
             }
             if (!childFragments.isEmpty()) {
@@ -641,7 +760,7 @@ public class ActivityUtils {
         return wFragment;
     }
 
-    private static WFragment convertFragmentToWFragment(Fragment fragment, boolean isMainThread) {
+    private static WFragment convertFragmentToWFragment(Fragment fragment, boolean isMainThread, boolean coveredByTopActivity) {
         WFragment wFragment = new WFragment();
         wFragment.setClassName(fragment.getClass().getName());
         wFragment.setMemAddr(CodeLocatorUtils.getObjectMemAddr(fragment));
@@ -650,9 +769,7 @@ public class ActivityUtils {
         wFragment.setUserVisibleHint(fragment.getUserVisibleHint());
         wFragment.setTag(fragment.getTag());
         wFragment.setId(fragment.getId());
-        if (fragment.getView() != null) {
-            wFragment.setViewMemAddr(CodeLocatorUtils.getObjectMemAddr(fragment.getView()));
-        }
+        bindFragmentViewState(wFragment, fragment.getView(), coveredByTopActivity);
         List<Fragment> childFragments = null;
         FragmentManager childFragmentManager = null;
         if (isMainThread) {
@@ -685,7 +802,7 @@ public class ActivityUtils {
         if (childFragments != null && !childFragments.isEmpty()) {
             ArrayList<WFragment> childWFragments = new ArrayList<>();
             for (Fragment f : childFragments) {
-                WFragment convertFragment = convertFragmentToWFragment(f, isMainThread);
+                WFragment convertFragment = convertFragmentToWFragment(f, isMainThread, coveredByTopActivity);
                 childWFragments.add(convertFragment);
             }
             if (!childFragments.isEmpty()) {
@@ -693,6 +810,22 @@ public class ActivityUtils {
             }
         }
         return wFragment;
+    }
+
+    private static void bindFragmentViewState(WFragment fragment, View view, boolean coveredByTopActivity) {
+        fragment.setCoveredByTopActivity(coveredByTopActivity);
+        final boolean boundViewVisible = view != null && view.getVisibility() == View.VISIBLE;
+        fragment.setBoundViewVisible(boundViewVisible);
+        fragment.setEffectiveVisible(
+                !coveredByTopActivity
+                        && fragment.isAdded()
+                        && fragment.isVisible()
+                        && fragment.isUserVisibleHint()
+                        && boundViewVisible
+        );
+        if (view != null) {
+            fragment.setViewMemAddr(CodeLocatorUtils.getObjectMemAddr(view));
+        }
     }
 
     private static void buildShowAndAppInfo(WApplication wApplication, Activity activity, boolean needColor) {

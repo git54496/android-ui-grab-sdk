@@ -41,6 +41,15 @@ public class WFragment implements Serializable {
     @SerializedName("cf")
     private boolean mUserVisibleHint;
 
+    @SerializedName("cg")
+    private boolean mBoundViewVisible;
+
+    @SerializedName("ch")
+    private boolean mCoveredByTopActivity;
+
+    @SerializedName("ci")
+    private boolean mEffectiveVisible;
+
     public WActivity getActivity() {
         return mActivity;
     }
@@ -143,6 +152,30 @@ public class WFragment implements Serializable {
 
     public void setUserVisibleHint(boolean mUserVisibleHint) {
         this.mUserVisibleHint = mUserVisibleHint;
+    }
+
+    public boolean isBoundViewVisible() {
+        return mBoundViewVisible;
+    }
+
+    public void setBoundViewVisible(boolean boundViewVisible) {
+        mBoundViewVisible = boundViewVisible;
+    }
+
+    public boolean isCoveredByTopActivity() {
+        return mCoveredByTopActivity;
+    }
+
+    public void setCoveredByTopActivity(boolean coveredByTopActivity) {
+        mCoveredByTopActivity = coveredByTopActivity;
+    }
+
+    public boolean isEffectiveVisible() {
+        return mEffectiveVisible;
+    }
+
+    public void setEffectiveVisible(boolean effectiveVisible) {
+        mEffectiveVisible = effectiveVisible;
     }
 
     @Override

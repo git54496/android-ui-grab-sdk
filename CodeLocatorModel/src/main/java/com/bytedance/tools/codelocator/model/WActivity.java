@@ -21,6 +21,18 @@ public class WActivity implements Serializable {
     @SerializedName("cl")
     private String mStartInfo;
 
+    @SerializedName("cm")
+    private boolean mCurrent;
+
+    @SerializedName("cn")
+    private boolean mCovered;
+
+    @SerializedName("co")
+    private boolean mPaused;
+
+    @SerializedName("cp")
+    private boolean mStopped;
+
     @SerializedName("af")
     private String mMemAddr;
 
@@ -65,6 +77,38 @@ public class WActivity implements Serializable {
 
     public void setStartInfo(String mStartInfo) {
         this.mStartInfo = mStartInfo;
+    }
+
+    public boolean isCurrent() {
+        return mCurrent;
+    }
+
+    public void setCurrent(boolean current) {
+        mCurrent = current;
+    }
+
+    public boolean isCovered() {
+        return mCovered;
+    }
+
+    public void setCovered(boolean covered) {
+        mCovered = covered;
+    }
+
+    public boolean isPaused() {
+        return mPaused;
+    }
+
+    public void setPaused(boolean paused) {
+        mPaused = paused;
+    }
+
+    public boolean isStopped() {
+        return mStopped;
+    }
+
+    public void setStopped(boolean stopped) {
+        mStopped = stopped;
     }
 
     public String getMemAddr() {

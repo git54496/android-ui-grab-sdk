@@ -115,6 +115,9 @@ public class WApplication implements Serializable {
     @SerializedName("c0")
     private String mFetchUrl;
 
+    @SerializedName("c1")
+    private List<WActivity> mActivityStack;
+
     @SerializedName("ag")
     private String mClassName;
 
@@ -148,6 +151,14 @@ public class WApplication implements Serializable {
 
     public void setFetchUrl(String mFetchUrl) {
         this.mFetchUrl = mFetchUrl;
+    }
+
+    public List<WActivity> getActivityStack() {
+        return mActivityStack;
+    }
+
+    public void setActivityStack(List<WActivity> activityStack) {
+        mActivityStack = activityStack;
     }
 
     public List<ColorInfo> getColorInfo() {
