@@ -47,6 +47,8 @@ dependencies {
     }
 
     compileOnly("com.squareup.okhttp3:okhttp:3.8.1")
+
+    testImplementation "junit:junit:4.13.2"
 }
 
 apply plugin: "com.vanniktech.maven.publish"

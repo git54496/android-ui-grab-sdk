@@ -59,6 +59,10 @@ import java.util.Set;
  */
 public class ActivityUtils {
 
+    interface RecordMatcher<T> {
+        boolean matches(T item);
+    }
+
     private static final class ActivityRecordInfo {
         final Activity activity;
         final boolean current;
@@ -655,19 +659,31 @@ public class ActivityUtils {
         if (records.isEmpty() && currentActivity != null) {
             records.add(new ActivityRecordInfo(currentActivity, true, false, false));
         }
-        records.sort((left, right) -> {
-            if (left.current != right.current) {
-                return left.current ? -1 : 1;
+        return prioritizeCurrentForStack(records, new RecordMatcher<ActivityRecordInfo>() {
+            @Override
+            public boolean matches(ActivityRecordInfo item) {
+                return currentActivity != null && item.activity == currentActivity;
             }
-            if (left.stopped != right.stopped) {
-                return left.stopped ? 1 : -1;
-            }
-            if (left.paused != right.paused) {
-                return left.paused ? 1 : -1;
-            }
-            return left.activity.getClass().getName().compareTo(right.activity.getClass().getName());
         });
-        return records;
+    }
+
+    static <T> ArrayList<T> prioritizeCurrentForStack(List<T> records, RecordMatcher<T> matcher) {
+        final ArrayList<T> ordered = new ArrayList<>(records);
+        if (ordered.isEmpty() || matcher == null) {
+            return ordered;
+        }
+        for (int i = 0; i < ordered.size(); i++) {
+            final T item = ordered.get(i);
+            if (!matcher.matches(item)) {
+                continue;
+            }
+            if (i > 0) {
+                ordered.remove(i);
+                ordered.add(0, item);
+            }
+            break;
+        }
+        return ordered;
     }
 
     private static void fillActivityState(WActivity activity, ActivityRecordInfo record, boolean covered) {

@@ -5,7 +5,7 @@
 ## Current Status
 
 - Repo split is complete and independently buildable.
-- JitPack build target for this release is `v2.1.0-alpha.8`.
+- JitPack build target for this release is `v2.1.0-alpha.9`.
 - `android-ui-grab-sdk` now captures Compose semantics and richer Compose render/component data into `WView.mComposeNodes (b5)` and `WView.mComposeCapture (b6)`.
 - Current published artifacts on JitPack:
   - `codelocator-core` (`aar`)
@@ -25,9 +25,9 @@ Add dependencies:
 
 ```groovy
 dependencies {
-    implementation "com.github.git54496.android-ui-grab-sdk:codelocator-core:v2.1.0-alpha.8"
+    implementation "com.github.git54496.android-ui-grab-sdk:codelocator-core:v2.1.0-alpha.9"
     // optional explicit model dependency
-    implementation "com.github.git54496.android-ui-grab-sdk:codelocator-model:v2.1.0-alpha.8"
+    implementation "com.github.git54496.android-ui-grab-sdk:codelocator-model:v2.1.0-alpha.9"
 }
 ```
 
